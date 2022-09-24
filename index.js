@@ -165,10 +165,20 @@ function session(options) {
   }
 
   // generates the new session
-  store.generate = function (req) {
+  store.generate = function (req, res, secrets) {
     req.sessionID = generateId(req);
     req.session = new Session(req);
-    req.session.cookie = new Cookie(cookieOptions);
+    var cookie = new Cookie(cookieOptions);
+    req.session.cookie = cookie;
+
+    debug("new session %s", header);
+    var signed = "s:" + signature.sign(req.sessionID, secrets[0]);
+    var data = cookie.serialize(name, signed, req.session.cookie.data);
+    var prev = res.getHeader("Set-Cookie") || [];
+
+    var header = Array.isArray(prev) ? prev.concat(data) : [prev, data];
+
+    req.token = header;
 
     if (cookieOptions.secure === "auto") {
       req.session.cookie.secure = issecure(req, trustProxy);
@@ -378,7 +388,7 @@ function session(options) {
 
     // generate the session
     function generate() {
-      store.generate(req);
+      store.generate(req, res, secrets);
       originalId = req.sessionID;
       originalHash = hash(req.session);
       wrapmethods(req.session);
@@ -492,6 +502,10 @@ function session(options) {
         return false;
       }
 
+      if (!req.session) {
+        return true;
+      }
+
       return cookieId !== req.sessionID
         ? saveUninitializedSession || isModified(req.session)
         : rollingSessions ||
@@ -564,7 +578,6 @@ function generateSessionId(sess) {
 function getcookie(req, name, secrets) {
   var header = req.headers.authorization;
   debug("authorization header %o", header);
-  debug("cookie name %o", req.headers.cookie);
   var raw;
   var val;
 
