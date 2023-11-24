@@ -67,8 +67,8 @@ var defer =
   typeof setImmediate === "function"
     ? setImmediate
     : function (fn) {
-        process.nextTick(fn.bind.apply(fn, arguments));
-      };
+      process.nextTick(fn.bind.apply(fn, arguments));
+    };
 
 /**
  * Setup session store with the given `options`.
@@ -174,7 +174,7 @@ function session(options) {
     debug("new session %s", header);
     var signed = "s:" + signature.sign(req.sessionID, secrets[0]);
     var data = cookie.serialize(name, signed, req.session.cookie.data);
-    var prev = res.getHeader("Set-Cookie") || [];
+    var prev = (res.getHeader && res.getHeader("Set-Cookie")) || (res.get && res.get("Set-Cookie")) || [];
 
     var header = Array.isArray(prev) ? prev.concat(data) : [prev, data];
 
@@ -308,7 +308,7 @@ function session(options) {
           return ret;
         }
 
-        var contentLength = Number(res.getHeader("Content-Length"));
+        var contentLength = (res.getHeader && Number(res.getHeader("Content-Length"))) || (res.get && Number(res.get("Content-Length")));
 
         if (!isNaN(contentLength) && contentLength > 0) {
           // measure chunk
@@ -520,7 +520,7 @@ function session(options) {
       var signed = "s:" + signature.sign(req.sessionID, secrets[0]);
       var data = cookie.serialize(name, signed, req.session.cookie.data);
 
-      var prev = res.getHeader("Set-Cookie") || [];
+      var prev = (res.getHeader && res.getHeader("Set-Cookie")) || (res.get && res.get("Set-Cookie")) || [];
       var header = Array.isArray(prev) ? prev.concat(data) : [prev, data];
 
       req.token = header;
@@ -705,7 +705,7 @@ function setcookie(res, req, name, val, secret, options) {
   var signed = "s:" + signature.sign(val, secret);
   var data = cookie.serialize(name, signed, options);
 
-  var prev = res.getHeader("Set-Cookie") || [];
+  var prev = (res.getHeader && res.getHeader("Set-Cookie")) || (res.get && res.get("Set-Cookie")) || [];
   var header = Array.isArray(prev) ? prev.concat(data) : [prev, data];
 
   // if (shouldReplaceCookieWithToken) {
